@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  @keyframes train-move {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(120vw);
+    }
+  }
+
+  .animate-train-move {
+    animation: train-move 10s linear infinite;
+  }
+}
+
+/* Reusable Card */
+.card {
+  @apply flex items-center justify-between rounded-2xl shadow-lg px-10 py-8 w-full max-w-5xl cursor-pointer transition-transform duration-200 hover:scale-105;
+}
+
