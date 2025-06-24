@@ -1,6 +1,7 @@
+// Models/wheelData.js
 const mongoose = require('mongoose');
 
-const wheelDataSchema = new mongoose.Schema({
+const wheelSchema = new mongoose.Schema({
   TrainID: String,
   Axle: String,
   State: String,
@@ -8,7 +9,7 @@ const wheelDataSchema = new mongoose.Schema({
   diameter: Number,
   flangeHeight: Number,
   flangeThickness: Number,
-  qr: Number,
+  qr: Number
 });
 
-module.exports = mongoose.model('WheelData', wheelDataSchema);
+module.exports = mongoose.model('WheelData', wheelSchema);
