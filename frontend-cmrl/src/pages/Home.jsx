@@ -48,6 +48,7 @@ export default function Home() {
   className="flex w-full max-w-[1300px] bg-[#97d5c6] rounded-2xl overflow-hidden shadow-lg cursor-pointer hover:scale-105 transition-transform duration-300"
   style={{ height: "200px" }}
 >
+  
   {/* IMAGE BLOCK with white background */}
   <div className="h-full w-[200px] bg-white rounded-l-2xl overflow-hidden">
     <img

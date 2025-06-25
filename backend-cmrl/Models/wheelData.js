@@ -1,15 +1,17 @@
-// Models/wheelData.js
+// backend-cmrl/Models/wheelData.js
+
 const mongoose = require('mongoose');
 
-const wheelSchema = new mongoose.Schema({
-  TrainID: String,
-  Axle: String,
-  State: String,
-  Side: String,
-  diameter: Number,
-  flangeHeight: Number,
-  flangeThickness: Number,
-  qr: Number
+const wheelDataSchema = new mongoose.Schema({
+  TrainID: { type: String, required: true },
+  Axle: { type: String, required: true },
+  Side: { type: String, required: true },
+  State: { type: String, enum: ['before', 'after'], required: true },
+  diameter: { type: Number, required: true },
+  flangeHeight: { type: Number, required: true },
+  flangeThickness: { type: Number, required: true },
+  qr: { type: Number, required: true },
+  timestamp: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('WheelData', wheelSchema);
+module.exports = mongoose.model('WheelData', wheelDataSchema);
