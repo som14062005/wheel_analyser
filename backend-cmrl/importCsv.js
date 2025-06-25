@@ -1,65 +1,87 @@
-require('dotenv').config();
 const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
-const csv = require('csvtojson');
+const csv = require('csv-parser');
 const WheelData = require('./Models/wheelData');
 
-// MongoDB connect
-mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/wheeldb')
-  .then(() => console.log('✅ Connected to MongoDB'))
-  .catch(err => {
+const MONGO_URI = 'mongodb://127.0.0.1:27017/wheel-analyser';
+
+mongoose.connect(MONGO_URI)
+  .then(() => {
+    console.log('✅ Connected to MongoDB');
+    importAllCSVs();
+  })
+  .catch((err) => {
     console.error('❌ MongoDB connection error:', err);
-    process.exit(1);
   });
 
-// Directory where CSV files are stored
-const dataDir = path.join(__dirname, 'data');
+const csvDir = path.join(__dirname, 'data');
 
-// Helper to clean keys (make case-insensitive matching easy)
-const normalizeKey = key => key.trim().toLowerCase().replace(/\s+/g, '');
+const importCSV = (filePath) => {
+  return new Promise((resolve, reject) => {
+    const rawMap = {}; // wheelId → { TrainID, before, after }
 
-async function importAllCSVs() {
-  const files = fs.readdirSync(dataDir).filter(file => file.startsWith('cmrltr') && file.endsWith('.csv'));
+    fs.createReadStream(filePath)
+      .pipe(csv())
+      .on('data', (data) => {
+        const state = data.State?.trim().toLowerCase(); // "before" or "after"
+        const side = data.Side?.trim().toUpperCase();   // "LH" or "RH"
+        const trainId = data.TrainID?.trim().toLowerCase();
+        const axle = data.Axle?.trim().toUpperCase();
 
-  for (const file of files) {
-    const filePath = path.join(dataDir, file);
-    const trainID = path.basename(file, '.csv'); // e.g., cmrltr1
+        if (!state || !side || !trainId || !axle) return;
 
-    try {
-      const rawJson = await csv().fromFile(filePath);
+        const wheelId = `${axle}-${side}`; // e.g., "L9-R9-LH"
 
-      const formatted = rawJson.map(entry => {
-        const keys = Object.keys(entry).reduce((acc, k) => {
-          acc[normalizeKey(k)] = entry[k];
-          return acc;
-        }, {});
+        if (!rawMap[wheelId]) {
+          rawMap[wheelId] = {
+            wheelId,
+            TrainID: trainId
+          };
+        }
 
-        return {
-          TrainID: trainID,
-          Axle: keys['axle'],
-          State: keys['state'],
-          Side: keys['side'] || null,
-          diameter: parseFloat(keys['wheeldiameter'] || keys['diameter']),
-          flangeHeight: parseFloat(keys['flangeheight']),
-          flangeThickness: parseFloat(keys['flangethickness']),
-          qr: parseFloat(keys['qr'])
+        rawMap[wheelId][state] = {
+          diameter: parseFloat(data['Wheel Diameter']),
+          flangeHeight: parseFloat(data['Flange Height']),
+          flangeThickness: parseFloat(data['Flange Thickness']),
+          qr: parseFloat(data['QR']),
+          timestamp: new Date() // or use: new Date(data.timestamp)
         };
+      })
+      .on('end', async () => {
+        try {
+          const documents = Object.values(rawMap).filter(
+            entry => entry.before && entry.after
+          );
+
+          await WheelData.insertMany(documents);
+          console.log(`✅ Imported ${documents.length} entries from ${path.basename(filePath)}`);
+          resolve();
+        } catch (err) {
+          console.error(`❌ Error importing ${path.basename(filePath)}:`, err.message);
+          reject(err);
+        }
       });
+  });
+};
 
-      const cleaned = formatted.filter(e =>
-        e.Axle && e.State && !isNaN(e.diameter)
-      );
+const importAllCSVs = async () => {
+  try {
+    const files = fs.readdirSync(csvDir).filter(file => file.endsWith('.csv'));
 
-      await WheelData.insertMany(cleaned);
-      console.log(`✅ Imported ${cleaned.length} entries from ${file}`);
-    } catch (error) {
-      console.error(`❌ Error importing ${file}: ${error.message}`);
+    for (const file of files) {
+      const filePath = path.join(csvDir, file);
+      try {
+        await importCSV(filePath);
+      } catch {
+        // Error already logged
+      }
     }
+
+    console.log('✅ All CSVs processed.');
+    mongoose.disconnect();
+  } catch (err) {
+    console.error('❌ Error reading CSV directory:', err);
+    mongoose.disconnect();
   }
-
-  console.log('✅ All CSVs processed.');
-  mongoose.disconnect();
-}
-
-importAllCSVs();
+};

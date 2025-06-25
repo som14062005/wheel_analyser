@@ -1,13 +1,8 @@
-// backend-cmrl/routes/wheelRoutes.js
-
 const express = require('express');
 const router = express.Router();
 const WheelData = require('../Models/wheelData');
 
-/**
- * GET /api/wheels/:trainId
- * Combines 'before' and 'after' states into a single object per wheelId
- */
+// GET /api/wheels/:trainId
 router.get('/:trainId', async (req, res) => {
   const trainId = req.params.trainId.trim().toLowerCase();
 
@@ -17,7 +12,14 @@ router.get('/:trainId', async (req, res) => {
     const wheelMap = {};
 
     entries.forEach((entry) => {
-      const key = `${entry.Axle}-${entry.Side}`; // Ex: "R1-L1-LH"
+      // Skip invalid entries missing important fields
+      if (!entry.Axle || !entry.Side || !entry.State) {
+        console.warn("⚠️ Skipping invalid entry (missing Axle, Side or State):", entry);
+        return;
+      }
+
+      const key = `${entry.Axle}-${entry.Side}`; // e.g., L9-R9-LH
+      const state = entry.State.toLowerCase();
 
       if (!wheelMap[key]) {
         wheelMap[key] = {
@@ -26,7 +28,6 @@ router.get('/:trainId', async (req, res) => {
         };
       }
 
-      const state = entry.State.toLowerCase();
       wheelMap[key][state] = {
         diameter: entry.diameter,
         flangeHeight: entry.flangeHeight,
@@ -36,7 +37,6 @@ router.get('/:trainId', async (req, res) => {
       };
     });
 
-    // Filter only fully valid wheels (have both before and after)
     const result = Object.values(wheelMap).filter(w => w.before && w.after);
 
     if (!result.length) {
@@ -50,10 +50,7 @@ router.get('/:trainId', async (req, res) => {
   }
 });
 
-/**
- * POST /api/wheels/add
- * Adds new wheel data (used for testing or admin panel)
- */
+// POST /api/wheels/add
 router.post('/add', async (req, res) => {
   try {
     const entry = new WheelData(req.body);
