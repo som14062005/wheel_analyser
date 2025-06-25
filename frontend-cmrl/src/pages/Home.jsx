@@ -10,10 +10,11 @@ export default function Home() {
   const navigate = useNavigate();
 
   return (
-    <div
-      className="relative min-h-screen pt-[175px] pb-10 px-4 bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: "url('bg1.png')" }}
-    >
+   <div
+  className="relative min-h-screen pt-[100px] pb-10 px-4 bg-cover bg-center bg-no-repeat"
+  style={{ backgroundImage: "url('bg1.png')" }}
+>
+
       {/* Fixed Header */}
       <div className="fixed top-0 left-0 w-full z-50 bg-white shadow-md">
         <div className="flex flex-col items-center py-4">

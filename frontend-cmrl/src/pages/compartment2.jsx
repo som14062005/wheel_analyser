@@ -1,4 +1,3 @@
-// src/pages/Compartment2.jsx
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { getWheelData } from '../services/api';
@@ -48,19 +47,18 @@ const Compartment2 = () => {
 
   return (
     <div className="flex h-screen font-sans overflow-hidden">
-
-      {/* LEFT: Static Layout */}
+      {/* LEFT: Static Train Layout */}
       <div className="w-[40%] p-6 bg-slate-200 overflow-hidden">
-        <h2 className="text-xl font-bold mb-4">Train Layout </h2>
+        <h2 className="text-xl font-bold mb-4">Train Layout</h2>
         <div className="relative w-[300px] h-[500px] mx-auto">
           <img src="/svg/body.svg" alt="Train Body" className="absolute w-[70%] top-[-30px]" />
           <div className="absolute top-[270px] left-[8%] z-10 font-bold">TRAIN BOTTOM VIEW</div>
 
           <img src="/svg/bogie 1.svg" className="absolute top-[60px] left-0 w-[70%]" />
-          <div className="absolute top-[120px] left-[22%] bg-black bg-opacity-50 text-white px-2 py-1 rounded">BOGIE 3</div>
+          <div className="absolute top-[120px] left-[22%] bg-black bg-opacity-50 text-white px-2 py-1 rounded">BOGIE 1</div>
 
           <img src="/svg/bogie 2.svg" className="absolute top-[370px] left-0 w-[70%]" />
-          <div className="absolute top-[430px] left-[22%] bg-black bg-opacity-50 text-white px-2 py-1 rounded">BOGIE 4</div>
+          <div className="absolute top-[430px] left-[22%] bg-black bg-opacity-50 text-white px-2 py-1 rounded">BOGIE 2</div>
 
           {axles.map(axle => (
             <img
@@ -69,7 +67,7 @@ const Compartment2 = () => {
               alt={axle.label}
               onClick={() => showInfo(axle.id)}
               title={axle.label}
-              className="absolute left-[-43px] w-[1000px] h-[85px] cursor-pointer"
+              className="absolute left-[-43px] w-[1000px] h-[85px] cursor-pointer transition duration-200 hover:scale-105 hover:brightness-110 hover:drop-shadow-md"
               style={{ top: `${axle.top}px` }}
             />
           ))}

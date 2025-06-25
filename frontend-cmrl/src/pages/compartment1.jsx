@@ -48,7 +48,6 @@ const Compartment1 = () => {
 
   return (
     <div className="flex h-screen font-sans overflow-hidden">
-
       {/* LEFT: Static Train Layout */}
       <div className="w-[40%] p-6 bg-slate-200 overflow-hidden">
         <h2 className="text-xl font-bold mb-4">Train Layout</h2>
@@ -69,7 +68,7 @@ const Compartment1 = () => {
               alt={axle.label}
               onClick={() => showInfo(axle.id)}
               title={axle.label}
-              className="absolute left-[-43px] w-[1000px] h-[85px] cursor-pointer"
+              className="absolute left-[-43px] w-[1000px] h-[85px] cursor-pointer transition duration-200 hover:scale-105 hover:brightness-110 hover:drop-shadow-md"
               style={{ top: `${axle.top}px` }}
             />
           ))}
