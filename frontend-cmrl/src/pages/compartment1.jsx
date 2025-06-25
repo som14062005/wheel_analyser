@@ -1,9 +1,12 @@
+// src/pages/Compartment1.jsx
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { getWheelData } from '../services/api';
-import WheelChart from '../components/WheelChart'; // ✅ Capital 'C'
+import WheelChart from '../components/WheelChart';
 import ToleranceGauge from '../components/ToleranceGauge';
-
+import HeatmapChart from '../components/HeatmapChart';
+import WheelRadarChart from '../components/WheelRadarChart';
+import TrendChart from '../components/TrendChart';
 
 const normalize = (value, max) => (value / max) * 100;
 
@@ -15,18 +18,10 @@ const Compartment1 = () => {
   const [selectedWheel, setSelectedWheel] = useState(null);
 
   useEffect(() => {
-    console.log("✅ Received Train ID:", trainId);
-  }, [trainId]);
-
-  useEffect(() => {
     if (trainId) {
-      console.log("🌐 Sending API call to:", `${import.meta.env.VITE_API_URL}/api/wheels/${trainId}`);
       getWheelData(trainId)
-        .then(data => {
-          console.log("✅ Fetched wheelData:", data);
-          setWheelData(data);
-        })
-        .catch(err => console.error("❌ API Fetch Error:", err));
+        .then(data => setWheelData(data))
+        .catch(err => console.error("API Error:", err));
     }
   }, [trainId]);
 
@@ -40,142 +35,120 @@ const Compartment1 = () => {
   const showInfo = (axleId) => {
     const lhId = `${axleId}-LH`;
     const rhId = `${axleId}-RH`;
-
     const left = wheelData.find(w => w.wheelId === lhId);
     const right = wheelData.find(w => w.wheelId === rhId);
 
     if (left?.before && left?.after && right?.before && right?.after) {
-      setSelectedWheel({
-        wheelId: axleId,
-        left,
-        right
-      });
+      setSelectedWheel({ wheelId: axleId, left, right });
     } else {
-      alert(`⚠️ Missing BEFORE or AFTER data for ${axleId}.`);
+      alert(`⚠️ Missing data for ${axleId}.`);
       setSelectedWheel(null);
     }
   };
 
-  const tableStyle = {
-    width: '100%',
-    borderCollapse: 'collapse',
-    fontSize: '12px',
-    background: 'white',
-    marginBottom: '20px'
-  };
-
-  const paramStyle = {
-    textAlign: 'left',
-    fontWeight: 'bold',
-    background: '#f8f8f8'
-  };
-
   return (
-    <div className="dashboard" style={{ display: 'flex', height: '100vh', fontFamily: 'sans-serif' }}>
-      <div style={{ width: '40%', padding: '40px', backgroundColor: '#eef2f7' }}>
-        <h2>Train Layout</h2>
-        <div style={{ position: 'relative', width: '300px', height: '500px', margin: 'auto' }}>
-          <img src="/svg/body.svg" alt="Train Body" style={{ position: 'absolute', width: '70%', top: '-30px' }} />
-          <div style={{ position: 'absolute', top: '270px', left: '8%', zIndex: 10, fontWeight: 'bold' }}>
-            TRAIN BOTTOM VIEW
-          </div>
-          <img src="/svg/bogie 1.svg" style={{ position: 'absolute', top: '60px', left: '0px', width: '70%' }} />
-          <div style={{ position: 'absolute', top: '120px', left: '22%', background: '#0008', color: 'white', padding: '4px 8px', borderRadius: '5px' }}>
-            BOGIE 1
-          </div>
-          <img src="/svg/bogie 2.svg" style={{ position: 'absolute', top: '370px', left: '0px', width: '70%' }} />
-          <div style={{ position: 'absolute', top: '430px', left: '22%', background: '#0008', color: 'white', padding: '4px 8px', borderRadius: '5px' }}>
-            BOGIE 2
-          </div>
-          {axles.map((axle) => (
+    <div className="flex h-screen font-sans overflow-hidden">
+      {/* LEFT: Static Train Layout */}
+      <div className="w-[40%] p-6 bg-slate-200 overflow-hidden">
+        <h2 className="text-xl font-bold mb-4">Train Layout</h2>
+        <div className="relative w-[300px] h-[500px] mx-auto">
+          <img src="/svg/body.svg" alt="Train Body" className="absolute w-[70%] top-[-30px]" />
+          <div className="absolute top-[270px] left-[8%] z-10 font-bold">TRAIN BOTTOM VIEW</div>
+
+          <img src="/svg/bogie 1.svg" className="absolute top-[60px] left-0 w-[70%]" />
+          <div className="absolute top-[120px] left-[22%] bg-black bg-opacity-50 text-white px-2 py-1 rounded">BOGIE 1</div>
+
+          <img src="/svg/bogie 2.svg" className="absolute top-[370px] left-0 w-[70%]" />
+          <div className="absolute top-[430px] left-[22%] bg-black bg-opacity-50 text-white px-2 py-1 rounded">BOGIE 2</div>
+
+          {axles.map(axle => (
             <img
               key={axle.id}
               src={axle.img}
               alt={axle.label}
               onClick={() => showInfo(axle.id)}
               title={axle.label}
-              style={{
-                position: 'absolute',
-                top: `${axle.top}px`,
-                left: '-43px',
-                width: '1000px',
-                height: '85px',
-                cursor: 'pointer'
-              }}
+              className="absolute left-[-43px] w-[1000px] h-[85px] cursor-pointer transition duration-200 hover:scale-105 hover:brightness-110 hover:drop-shadow-md"
+              style={{ top: `${axle.top}px` }}
             />
           ))}
         </div>
       </div>
 
-      <div style={{ width: '60%', padding: '30px', overflowY: 'auto', background: 'white' }}>
-        <h2>Wheel Details</h2>
-        <div style={{ background: 'white', padding: '20px', border: '1px solid #ccc', height: '90%', overflowY: 'auto' }}>
-          {selectedWheel ? (
-            <>
-              <h3>Wheel Axle: {selectedWheel.wheelId}</h3>
+      {/* RIGHT: Scrollable Visualizations */}
+      <div className="w-[60%] h-full overflow-y-auto p-6 bg-white">
+        <h2 className="text-xl font-bold mb-4">Wheel Details</h2>
 
-              <div style={{ fontWeight: 'bold', fontSize: '14px', margin: '20px 0 10px' }}>Before:</div>
-              <table style={tableStyle}>
-                <thead>
+        {selectedWheel ? (
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold">Axle ID: {selectedWheel.wheelId}</h3>
+
+            <div>
+              <h4 className="font-semibold mb-2">Before</h4>
+              <table className="w-full text-sm border mb-4">
+                <thead className="bg-gray-200">
                   <tr><th></th><th>LH</th><th>RH</th></tr>
                 </thead>
                 <tbody>
-                  <tr><td style={paramStyle}>WHEEL DIAMETER</td><td>{selectedWheel.left.before.diameter}</td><td>{selectedWheel.right.before.diameter}</td></tr>
-                  <tr><td style={paramStyle}>FLANGE HEIGHT</td><td>{selectedWheel.left.before.flangeHeight}</td><td>{selectedWheel.right.before.flangeHeight}</td></tr>
-                  <tr><td style={paramStyle}>FLANGE THICKNESS</td><td>{selectedWheel.left.before.flangeThickness}</td><td>{selectedWheel.right.before.flangeThickness}</td></tr>
-                  <tr><td style={paramStyle}>QR</td><td>{selectedWheel.left.before.qr}</td><td>{selectedWheel.right.before.qr}</td></tr>
+                  <tr><td>Diameter</td><td>{selectedWheel.left.before.diameter}</td><td>{selectedWheel.right.before.diameter}</td></tr>
+                  <tr><td>Flange Height</td><td>{selectedWheel.left.before.flangeHeight}</td><td>{selectedWheel.right.before.flangeHeight}</td></tr>
+                  <tr><td>Flange Thickness</td><td>{selectedWheel.left.before.flangeThickness}</td><td>{selectedWheel.right.before.flangeThickness}</td></tr>
+                  <tr><td>QR</td><td>{selectedWheel.left.before.qr}</td><td>{selectedWheel.right.before.qr}</td></tr>
                 </tbody>
               </table>
+            </div>
 
-              <div style={{ fontWeight: 'bold', fontSize: '14px', margin: '20px 0 10px' }}>After:</div>
-              <table style={tableStyle}>
-                <thead>
+            <div>
+              <h4 className="font-semibold mb-2">After</h4>
+              <table className="w-full text-sm border">
+                <thead className="bg-gray-200">
                   <tr><th></th><th>LH</th><th>RH</th></tr>
                 </thead>
                 <tbody>
-                  <tr><td style={paramStyle}>WHEEL DIAMETER</td><td>{selectedWheel.left.after.diameter}</td><td>{selectedWheel.right.after.diameter}</td></tr>
-                  <tr><td style={paramStyle}>FLANGE HEIGHT</td><td>{selectedWheel.left.after.flangeHeight}</td><td>{selectedWheel.right.after.flangeHeight}</td></tr>
-                  <tr><td style={paramStyle}>FLANGE THICKNESS</td><td>{selectedWheel.left.after.flangeThickness}</td><td>{selectedWheel.right.after.flangeThickness}</td></tr>
-                  <tr><td style={paramStyle}>QR</td><td>{selectedWheel.left.after.qr}</td><td>{selectedWheel.right.after.qr}</td></tr>
+                  <tr><td>Diameter</td><td>{selectedWheel.left.after.diameter}</td><td>{selectedWheel.right.after.diameter}</td></tr>
+                  <tr><td>Flange Height</td><td>{selectedWheel.left.after.flangeHeight}</td><td>{selectedWheel.right.after.flangeHeight}</td></tr>
+                  <tr><td>Flange Thickness</td><td>{selectedWheel.left.after.flangeThickness}</td><td>{selectedWheel.right.after.flangeThickness}</td></tr>
+                  <tr><td>QR</td><td>{selectedWheel.left.after.qr}</td><td>{selectedWheel.right.after.qr}</td></tr>
                 </tbody>
               </table>
+            </div>
 
-              <div style={{ marginTop: '30px' }}>
-  <h3>📊 Visualization: LH vs RH Comparison</h3>
-  <WheelChart left={selectedWheel.left} right={selectedWheel.right} />
-</div>
+            <div>
+              <h4 className="font-semibold">📊 LH vs RH Comparison</h4>
+              <WheelChart left={selectedWheel.left} right={selectedWheel.right} />
+            </div>
 
-<div style={{ marginTop: '40px' }}>
-  <h3>🎯 Live Gauge View</h3>
-  <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '20px' }}>
-    <ToleranceGauge
-      value={normalize(parseFloat(selectedWheel.left.after.diameter), 900)}
-      actual={parseFloat(selectedWheel.left.after.diameter)}
-      label="LH Diameter"
-    />
-    <ToleranceGauge
-      value={normalize(parseFloat(selectedWheel.right.after.diameter), 900)}
-      actual={parseFloat(selectedWheel.right.after.diameter)}
-      label="RH Diameter"
-    />
-    <ToleranceGauge
-      value={normalize(parseFloat(selectedWheel.left.after.qr), 14)}
-      actual={parseFloat(selectedWheel.left.after.qr)}
-      label="LH QR"
-    />
-    <ToleranceGauge
-      value={normalize(parseFloat(selectedWheel.right.after.qr), 14)}
-      actual={parseFloat(selectedWheel.right.after.qr)}
-      label="RH QR"
-    />
-  </div>
-</div>
+            <div>
+              <h4 className="font-semibold">🎯 Tolerance Gauges</h4>
+              <div className="flex flex-wrap justify-center gap-4">
+                <ToleranceGauge value={normalize(selectedWheel.left.after.diameter, 900)} actual={selectedWheel.left.after.diameter} label="LH Diameter" />
+                <ToleranceGauge value={normalize(selectedWheel.right.after.diameter, 900)} actual={selectedWheel.right.after.diameter} label="RH Diameter" />
+                <ToleranceGauge value={normalize(selectedWheel.left.after.qr, 14)} actual={selectedWheel.left.after.qr} label="LH QR" />
+                <ToleranceGauge value={normalize(selectedWheel.right.after.qr, 14)} actual={selectedWheel.right.after.qr} label="RH QR" />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="text-gray-500">👆 Click an axle to load data visualization.</p>
+        )}
 
-
-            </>
-          ) : (
-            <p>Select an axle to view its wheel details.</p>
-          )}
+        {/* 🔍 Additional Charts */}
+        <div className="pt-8 border-t border-gray-300 mt-8">
+          <h4 className="text-lg font-semibold mb-4">🔍 Additional Insights</h4>
+          <div className="grid gap-6">
+            <div>
+              <h5 className="font-semibold mb-2">🔥 Heatmap Overview</h5>
+              <HeatmapChart data={wheelData} />
+            </div>
+            <div>
+              <h5 className="font-semibold mb-2">🌀 Radar Comparison</h5>
+              <WheelRadarChart data={wheelData} />
+            </div>
+            <div>
+              <h5 className="font-semibold mb-2">📈 Parameter Trends</h5>
+              <TrendChart data={wheelData} />
+            </div>
+          </div>
         </div>
       </div>
     </div>

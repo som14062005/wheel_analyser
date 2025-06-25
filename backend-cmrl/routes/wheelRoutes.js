@@ -1,63 +1,67 @@
+// backend-cmrl/routes/wheelRoutes.js
+
 const express = require('express');
 const router = express.Router();
 const WheelData = require('../Models/wheelData');
-const path = require('path');
-const csv = require('csvtojson');
-const fs = require('fs');
-// Get all wheel data
-// Route: /api/wheels/:trainId
-// wheelRoutes.js
 
+/**
+ * GET /api/wheels/:trainId
+ * Combines 'before' and 'after' states into a single object per wheelId
+ */
 router.get('/:trainId', async (req, res) => {
-  const trainId = req.params.trainId.toLowerCase(); // Fix casing issue
+  const trainId = req.params.trainId.trim().toLowerCase();
 
   try {
     const entries = await WheelData.find({ TrainID: trainId });
 
-    const grouped = {};
-    entries.forEach(entry => {
-  const key = `${entry.Axle}-${entry.Side}`;
-  if (!grouped[key]) {
-    grouped[key] = { wheelId: key };
-  }
+    const wheelMap = {};
 
-  if (entry.State.toLowerCase() === 'before') {
-    grouped[key].before = {
-      diameter: entry.diameter,
-      flangeHeight: entry.flangeHeight,
-      flangeThickness: entry.flangeThickness,
-      qr: entry.qr
-    };
-  } else if (entry.State.toLowerCase() === 'after') {
-    grouped[key].after = {
-      diameter: entry.diameter,
-      flangeHeight: entry.flangeHeight,
-      flangeThickness: entry.flangeThickness,
-      qr: entry.qr
-    };
-  }
-});
+    entries.forEach((entry) => {
+      const key = `${entry.Axle}-${entry.Side}`; // Ex: "R1-L1-LH"
 
+      if (!wheelMap[key]) {
+        wheelMap[key] = {
+          wheelId: key,
+          TrainID: entry.TrainID
+        };
+      }
 
-const result = Object.values(grouped);
+      const state = entry.State.toLowerCase();
+      wheelMap[key][state] = {
+        diameter: entry.diameter,
+        flangeHeight: entry.flangeHeight,
+        flangeThickness: entry.flangeThickness,
+        qr: entry.qr,
+        timestamp: entry.timestamp || null
+      };
+    });
 
+    // Filter only fully valid wheels (have both before and after)
+    const result = Object.values(wheelMap).filter(w => w.before && w.after);
+
+    if (!result.length) {
+      return res.status(404).json({ message: `No complete wheel data found for train '${trainId}'` });
+    }
 
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to get wheel data' });
+    console.error("❌ Error fetching wheel data:", err);
+    res.status(500).json({ error: 'Failed to fetch wheel data' });
   }
 });
 
-
-
-// Add one entry (optional POST route for testing)
+/**
+ * POST /api/wheels/add
+ * Adds new wheel data (used for testing or admin panel)
+ */
 router.post('/add', async (req, res) => {
   try {
-    const newEntry = new WheelData(req.body);
-    await newEntry.save();
-    res.json({ message: 'Entry saved successfully' });
+    const entry = new WheelData(req.body);
+    await entry.save();
+    res.status(201).json({ message: '✅ Entry saved successfully' });
   } catch (err) {
-    res.status(400).json({ error: 'Failed to save data' });
+    console.error("❌ Error saving wheel data:", err);
+    res.status(400).json({ error: 'Failed to save data', details: err.message });
   }
 });
 

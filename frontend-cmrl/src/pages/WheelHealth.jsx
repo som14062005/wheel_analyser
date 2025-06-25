@@ -45,9 +45,10 @@ const TrainTracker = () => {
 
   return (
     <div
-      className="min-h-[100vh] flex flex-col items-center pt-[150px] pb-10 px-4 bg-cover bg-center bg-no-repeat bg-fixed"
-      style={{ backgroundImage: "url('/bg1.png')" }}
-    >
+  className="min-h-[100vh] flex flex-col items-center pt-[60px] pb-10 px-4 bg-cover bg-center bg-no-repeat bg-fixed"
+  style={{ backgroundImage: "url('/bg1.png')" }}
+>
+
       {/* Search Box */}
       <div className="w-full max-w-3xl mb-10 px-4">
         <input
