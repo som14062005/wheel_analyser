@@ -10,7 +10,8 @@ const paramSchema = new mongoose.Schema({
 }, { _id: false });
 
 const wheelDataSchema = new mongoose.Schema({
-  wheelId: { type: String, required: true }, // Example: "L9-R9-LH"
+  trainId: { type: String, required: true },
+  wheelId: { type: String, required: true },  // e.g. L1-R1-LH
   before: { type: paramSchema, required: true },
   after: { type: paramSchema, required: true },
   timestamp: { type: Date, default: Date.now }
