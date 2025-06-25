@@ -7,13 +7,16 @@ import {
 const TrendChart = ({ data }) => {
   if (!data || data.length === 0) return <p>No data to show trends.</p>;
 
-  // Group and transform data by axle for each parameter
   const chartData = data.map((entry) => ({
     axle: entry.wheelId,
-    diameterBefore: entry.before?.diameter ?? null,
-    diameterAfter: entry.after?.diameter ?? null,
-    qrBefore: entry.before?.qr ?? null,
-    qrAfter: entry.after?.qr ?? null,
+    diameterBeforeLH: entry.before?.LH?.diameter ?? null,
+    diameterBeforeRH: entry.before?.RH?.diameter ?? null,
+    diameterAfterLH: entry.after?.LH?.diameter ?? null,
+    diameterAfterRH: entry.after?.RH?.diameter ?? null,
+    qrBeforeLH: entry.before?.LH?.qr ?? null,
+    qrBeforeRH: entry.before?.RH?.qr ?? null,
+    qrAfterLH: entry.after?.LH?.qr ?? null,
+    qrAfterRH: entry.after?.RH?.qr ?? null,
   }));
 
   return (
@@ -25,36 +28,14 @@ const TrendChart = ({ data }) => {
           <YAxis />
           <Tooltip />
           <Legend />
-          <Line
-            type="monotone"
-            dataKey="diameterBefore"
-            stroke="#8884d8"
-            name="Diameter Before"
-            dot={{ r: 3 }}
-          />
-          <Line
-            type="monotone"
-            dataKey="diameterAfter"
-            stroke="#82ca9d"
-            name="Diameter After"
-            dot={{ r: 3 }}
-          />
-          <Line
-            type="monotone"
-            dataKey="qrBefore"
-            stroke="#ff7300"
-            name="QR Before"
-            strokeDasharray="5 5"
-            dot={{ r: 3 }}
-          />
-          <Line
-            type="monotone"
-            dataKey="qrAfter"
-            stroke="#0088FE"
-            name="QR After"
-            strokeDasharray="5 5"
-            dot={{ r: 3 }}
-          />
+          <Line type="monotone" dataKey="diameterBeforeLH" stroke="#8884d8" name="Diameter Before LH" />
+          <Line type="monotone" dataKey="diameterBeforeRH" stroke="#8884d8" strokeDasharray="5 5" name="Diameter Before RH" />
+          <Line type="monotone" dataKey="diameterAfterLH" stroke="#82ca9d" name="Diameter After LH" />
+          <Line type="monotone" dataKey="diameterAfterRH" stroke="#82ca9d" strokeDasharray="5 5" name="Diameter After RH" />
+          <Line type="monotone" dataKey="qrBeforeLH" stroke="#ff7300" name="QR Before LH" />
+          <Line type="monotone" dataKey="qrBeforeRH" stroke="#ff7300" strokeDasharray="5 5" name="QR Before RH" />
+          <Line type="monotone" dataKey="qrAfterLH" stroke="#0088FE" name="QR After LH" />
+          <Line type="monotone" dataKey="qrAfterRH" stroke="#0088FE" strokeDasharray="5 5" name="QR After RH" />
         </LineChart>
       </ResponsiveContainer>
     </div>

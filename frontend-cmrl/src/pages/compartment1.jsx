@@ -19,36 +19,45 @@ const Compartment1 = () => {
 
   useEffect(() => {
     if (trainId) {
+      console.log("Train ID:", trainId);
       getWheelData(trainId)
-        .then(data => setWheelData(data))
+        .then(data => {
+          console.log("Fetched data:", data);
+          setWheelData(data);
+        })
         .catch(err => console.error("API Error:", err));
     }
   }, [trainId]);
 
   const axles = [
-    { id: 'R1-L1', label: 'Axle 1', img: '/svg/axle1.svg', top: 50 },
-    { id: 'R2-L2', label: 'Axle 2', img: '/svg/axle2.svg', top: 140 },
-    { id: 'R3-L3', label: 'Axle 3', img: '/svg/axle3.svg', top: 360 },
-    { id: 'R4-L4', label: 'Axle 4', img: '/svg/axle4.svg', top: 450 },
+    { id: 'L1-R1', label: 'Axle 1', img: '/svg/axle1.svg', top: 50 },
+    { id: 'L2-R2', label: 'Axle 2', img: '/svg/axle2.svg', top: 140 },
+    { id: 'L3-R3', label: 'Axle 3', img: '/svg/axle3.svg', top: 360 },
+    { id: 'L4-R4', label: 'Axle 4', img: '/svg/axle4.svg', top: 450 },
   ];
 
   const showInfo = (axleId) => {
-    const lhId = `${axleId}-LH`;
-    const rhId = `${axleId}-RH`;
-    const left = wheelData.find(w => w.wheelId === lhId);
-    const right = wheelData.find(w => w.wheelId === rhId);
+  const wheel = wheelData.find(w => w.wheelId === axleId);
 
-    if (left?.before && left?.after && right?.before && right?.after) {
-      setSelectedWheel({ wheelId: axleId, left, right });
-    } else {
-      alert(`⚠️ Missing data for ${axleId}.`);
-      setSelectedWheel(null);
-    }
-  };
+  if (
+    wheel?.before?.LH && wheel?.before?.RH &&
+    wheel?.after?.LH && wheel?.after?.RH
+  ) {
+    setSelectedWheel({
+      wheelId: axleId,
+      left: { before: wheel.before.LH, after: wheel.after.LH },
+      right: { before: wheel.before.RH, after: wheel.after.RH }
+    });
+  } else {
+    alert(`⚠️ Missing data for ${axleId}`);
+    setSelectedWheel(null);
+  }
+};
+
 
   return (
     <div className="flex h-screen font-sans overflow-hidden">
-      {/* LEFT: Static Train Layout */}
+      {/* LEFT - Train Layout */}
       <div className="w-[40%] p-6 bg-slate-200 overflow-hidden">
         <h2 className="text-xl font-bold mb-4">Train Layout</h2>
         <div className="relative w-[300px] h-[500px] mx-auto">
@@ -75,7 +84,7 @@ const Compartment1 = () => {
         </div>
       </div>
 
-      {/* RIGHT: Scrollable Visualizations */}
+      {/* RIGHT - Details */}
       <div className="w-[60%] h-full overflow-y-auto p-6 bg-white">
         <h2 className="text-xl font-bold mb-4">Wheel Details</h2>
 
@@ -86,9 +95,7 @@ const Compartment1 = () => {
             <div>
               <h4 className="font-semibold mb-2">Before</h4>
               <table className="w-full text-sm border mb-4">
-                <thead className="bg-gray-200">
-                  <tr><th></th><th>LH</th><th>RH</th></tr>
-                </thead>
+                <thead className="bg-gray-200"><tr><th></th><th>LH</th><th>RH</th></tr></thead>
                 <tbody>
                   <tr><td>Diameter</td><td>{selectedWheel.left.before.diameter}</td><td>{selectedWheel.right.before.diameter}</td></tr>
                   <tr><td>Flange Height</td><td>{selectedWheel.left.before.flangeHeight}</td><td>{selectedWheel.right.before.flangeHeight}</td></tr>
@@ -101,9 +108,7 @@ const Compartment1 = () => {
             <div>
               <h4 className="font-semibold mb-2">After</h4>
               <table className="w-full text-sm border">
-                <thead className="bg-gray-200">
-                  <tr><th></th><th>LH</th><th>RH</th></tr>
-                </thead>
+                <thead className="bg-gray-200"><tr><th></th><th>LH</th><th>RH</th></tr></thead>
                 <tbody>
                   <tr><td>Diameter</td><td>{selectedWheel.left.after.diameter}</td><td>{selectedWheel.right.after.diameter}</td></tr>
                   <tr><td>Flange Height</td><td>{selectedWheel.left.after.flangeHeight}</td><td>{selectedWheel.right.after.flangeHeight}</td></tr>
@@ -132,7 +137,7 @@ const Compartment1 = () => {
           <p className="text-gray-500">👆 Click an axle to load data visualization.</p>
         )}
 
-        {/* 🔍 Additional Charts */}
+        {/* Extra Charts */}
         <div className="pt-8 border-t border-gray-300 mt-8">
           <h4 className="text-lg font-semibold mb-4">🔍 Additional Insights</h4>
           <div className="grid gap-6">

@@ -25,25 +25,30 @@ const Compartment3 = () => {
   }, [trainId]);
 
   const axles = [
-    { id: 'R9-L9', label: 'Axle 9', img: '/svg/axle1.svg', top: 50 },
-    { id: 'R10-L10', label: 'Axle 10', img: '/svg/axle2.svg', top: 140 },
-    { id: 'R11-L11', label: 'Axle 11', img: '/svg/axle3.svg', top: 360 },
-    { id: 'R12-L12', label: 'Axle 12', img: '/svg/axle4.svg', top: 450 },
+    { id: 'L9-R9', label: 'Axle 9', img: '/svg/axle1.svg', top: 50 },
+    { id: 'L10-R10', label: 'Axle 10', img: '/svg/axle2.svg', top: 140 },
+    { id: 'L11-R11', label: 'Axle 11', img: '/svg/axle3.svg', top: 360 },
+    { id: 'L12-R12', label: 'Axle 12', img: '/svg/axle4.svg', top: 450 },
   ];
 
   const showInfo = (axleId) => {
-    const lhId = `${axleId}-LH`;
-    const rhId = `${axleId}-RH`;
-    const left = wheelData.find(w => w.wheelId === lhId);
-    const right = wheelData.find(w => w.wheelId === rhId);
+  const wheel = wheelData.find(w => w.wheelId === axleId);
 
-    if (left?.before && left?.after && right?.before && right?.after) {
-      setSelectedWheel({ wheelId: axleId, left, right });
-    } else {
-      alert(`⚠️ Missing data for ${axleId}.`);
-      setSelectedWheel(null);
-    }
-  };
+  if (
+    wheel?.before?.LH && wheel?.before?.RH &&
+    wheel?.after?.LH && wheel?.after?.RH
+  ) {
+    setSelectedWheel({
+      wheelId: axleId,
+      left: { before: wheel.before.LH, after: wheel.after.LH },
+      right: { before: wheel.before.RH, after: wheel.after.RH }
+    });
+  } else {
+    alert(`⚠️ Missing data for ${axleId}`);
+    setSelectedWheel(null);
+  }
+};
+
 
   return (
     <div className="flex h-screen font-sans overflow-hidden">

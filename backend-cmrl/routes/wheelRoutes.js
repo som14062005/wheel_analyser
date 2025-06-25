@@ -2,54 +2,58 @@ const express = require('express');
 const router = express.Router();
 const WheelData = require('../Models/wheelData');
 
-/**
- * GET /api/wheels/:trainId
- * Combines 'before' and 'after' states into a single object per wheelId
- */
 router.get('/:trainId', async (req, res) => {
   const trainId = req.params.trainId.trim().toLowerCase();
 
   try {
-    const entries = await WheelData.find({ trainId });
+    const entries = await WheelData.find({
+      TrainID: { $regex: `^${trainId}$`, $options: 'i' }
+    });
 
     const wheelMap = {};
 
     entries.forEach((entry) => {
-      const key = `${entry.Axle}-${entry.Side}`; // Ex: "R1-L1-LH"
+      const key = entry.Axle; // Only group by Axle, not Side
 
       if (!wheelMap[key]) {
         wheelMap[key] = {
           wheelId: key,
-          TrainID: entry.TrainID
+          TrainID: entry.TrainID,
+          before: {},
+          after: {}
         };
       }
 
-      const state = entry.State.toLowerCase();
-      wheelMap[key][state] = {
-        diameter: entry.diameter,
-        flangeHeight: entry.flangeHeight,
-        flangeThickness: entry.flangeThickness,
-        qr: entry.qr,
-        timestamp: entry.timestamp || null
-      };
+      const state = entry.State?.toLowerCase(); // "before" or "after"
+      const side = entry.Side?.toUpperCase();   // "LH" or "RH"
+
+      if (state && side) {
+        wheelMap[key][state][side] = {
+          diameter: entry.diameter,
+          flangeHeight: entry.flangeHeight,
+          flangeThickness: entry.flangeThickness,
+          qr: entry.qr,
+          timestamp: entry.timestamp || null
+        };
+      }
     });
 
-    // Filter only fully valid wheels (have both before and after)
-    const result = Object.values(wheelMap).filter(w => w.before && w.after);
+    // Filter for complete wheels (both before and after with both sides)
+    const result = Object.values(wheelMap).filter(w =>
+      w.before?.LH && w.before?.RH && w.after?.LH && w.after?.RH
+    );
 
     if (!result.length) {
       return res.status(404).json({ message: `No complete wheel data found for train '${trainId}'` });
     }
 
-    res.json(entries);
+    res.json(result);
   } catch (err) {
     console.error("❌ Error fetching wheel data:", err);
     res.status(500).json({ error: 'Failed to fetch wheel data' });
   }
 });
 
-
-// POST /api/wheels/add
 router.post('/add', async (req, res) => {
   try {
     const entry = new WheelData(req.body);

@@ -1,20 +1,15 @@
+// Models/wheelData.js
 const mongoose = require('mongoose');
 
 const wheelDataSchema = new mongoose.Schema({
   TrainID: { type: String, required: true },
   Axle: { type: String, required: true },
-  Side: { type: String, required: true },
-  State: { type: String, required: true },
-  diameter: Number,
-  flangeHeight: Number,
-  flangeThickness: Number,
-  qr: Number,
-}, { _id: false });
-
-const wheelDataSchema = new mongoose.Schema({
-  wheelId: { type: String, required: true }, // Example: "L9-R9-LH"
-  before: { type: paramSchema, required: true },
-  after: { type: paramSchema, required: true },
+  Side: { type: String, enum: ['LH', 'RH'], required: true },
+  State: { type: String, enum: ['before', 'after'], required: true },
+  diameter: { type: Number, required: true },
+  flangeHeight: { type: Number, required: true },
+  flangeThickness: { type: Number, required: true },
+  qr: { type: Number, required: true },
   timestamp: { type: Date, default: Date.now }
 });
 
