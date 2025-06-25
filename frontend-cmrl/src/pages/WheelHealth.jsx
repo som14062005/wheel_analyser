@@ -20,13 +20,14 @@ const TrainTracker = () => {
   }, []);
 
   const trainData = useMemo(() => {
-    const totalTrains = 52;
-    return Array.from({ length: totalTrains }, (_, i) => {
-      const id = `CMRLTR${(i % 10) + 1}`;
-      const status = i % 3 === 0 ? 'active' : i % 3 === 1 ? 'inactive' : 'normal';
-      return { id, status };
-    });
-  }, []);
+  const totalTrains = 52;
+  return Array.from({ length: totalTrains }, (_, i) => {
+    const id = `CMRLTR${i + 1}`; // <-- Now correctly shows 1 to 52
+    const status = i % 3 === 0 ? 'active' : i % 3 === 1 ? 'inactive' : 'normal';
+    return { id, status };
+  });
+}, []);
+
 
   const filteredTrains = useMemo(() => {
     return trainData.filter(train =>

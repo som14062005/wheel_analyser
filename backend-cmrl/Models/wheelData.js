@@ -11,4 +11,4 @@ const wheelDataSchema = new mongoose.Schema({
   qr: Number,
 });
 
-module.exports = mongoose.model('WheelData', wheelDataSchema);
+module.exports = mongoose.model('WheelData', wheelDataSchema); // 👈 This creates "wheeldata"

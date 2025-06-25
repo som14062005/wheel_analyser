@@ -9,7 +9,7 @@ import compartment4 from '../assets/compartment4.png';
 const AxleInfo = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const trainId = location.state?.trainId || 'Unknown';
+  const trainId = location.state?.trainId || 'Unknown'; // Make sure this comes from the previous screen
 
   return (
     <div className="min-h-screen bg-white font-sans">
@@ -35,25 +35,25 @@ const AxleInfo = () => {
           <img
             src={compartment1}
             alt="Compartment 1"
-            onClick={() => navigate('/comp1')}
+            onClick={() => navigate('/comp1', { state: { trainId } })}
             className="w-[300px] cursor-pointer hover:scale-105 transition-transform"
           />
           <img
             src={compartment2}
             alt="Compartment 2"
-            onClick={() => navigate('/comp2')}
+            onClick={() => navigate('/comp2', { state: { trainId } })}
             className="w-[300px] cursor-pointer hover:scale-105 transition-transform"
           />
           <img
             src={compartment3}
             alt="Compartment 3"
-            onClick={() => navigate('/comp3')}
+            onClick={() => navigate('/comp3', { state: { trainId } })}
             className="w-[300px] cursor-pointer hover:scale-105 transition-transform"
           />
           <img
             src={compartment4}
             alt="Compartment 4"
-            onClick={() => navigate('/comp4')}
+            onClick={() => navigate('/comp4', { state: { trainId } })}
             className="w-[300px] cursor-pointer hover:scale-105 transition-transform"
           />
         </div>

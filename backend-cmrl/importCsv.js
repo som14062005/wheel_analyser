@@ -5,7 +5,7 @@ const path = require('path');
 const csv = require('csvtojson');
 const WheelData = require('./Models/wheelData');
 
-// 1. MongoDB Connection
+// MongoDB connect
 mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/wheeldb')
   .then(() => console.log('✅ Connected to MongoDB'))
   .catch(err => {
@@ -13,8 +13,11 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/wheeldb')
     process.exit(1);
   });
 
-// 2. Path to the data folder
+// Directory where CSV files are stored
 const dataDir = path.join(__dirname, 'data');
+
+// Helper to clean keys (make case-insensitive matching easy)
+const normalizeKey = key => key.trim().toLowerCase().replace(/\s+/g, '');
 
 async function importAllCSVs() {
   const files = fs.readdirSync(dataDir).filter(file => file.startsWith('cmrltr') && file.endsWith('.csv'));
@@ -24,22 +27,34 @@ async function importAllCSVs() {
     const trainID = path.basename(file, '.csv'); // e.g., cmrltr1
 
     try {
-      const jsonArray = await csv().fromFile(filePath);
-      const formatted = jsonArray.map(entry => ({
-        TrainID: trainID,
-        Axle: entry['Axle'],
-        State: entry['State'],
-        Side: entry['Side'],
-        diameter: parseFloat(entry['Wheel Diameter']),
-        flangeHeight: parseFloat(entry['Flange Height']),
-        flangeThickness: parseFloat(entry['Flange Thickness']),
-        qr: parseFloat(entry['QR'])
-      }));
+      const rawJson = await csv().fromFile(filePath);
 
-      await WheelData.insertMany(formatted);
-      console.log(`✅ Imported: ${file} (${formatted.length} entries)`);
+      const formatted = rawJson.map(entry => {
+        const keys = Object.keys(entry).reduce((acc, k) => {
+          acc[normalizeKey(k)] = entry[k];
+          return acc;
+        }, {});
+
+        return {
+          TrainID: trainID,
+          Axle: keys['axle'],
+          State: keys['state'],
+          Side: keys['side'] || null,
+          diameter: parseFloat(keys['wheeldiameter'] || keys['diameter']),
+          flangeHeight: parseFloat(keys['flangeheight']),
+          flangeThickness: parseFloat(keys['flangethickness']),
+          qr: parseFloat(keys['qr'])
+        };
+      });
+
+      const cleaned = formatted.filter(e =>
+        e.Axle && e.State && !isNaN(e.diameter)
+      );
+
+      await WheelData.insertMany(cleaned);
+      console.log(`✅ Imported ${cleaned.length} entries from ${file}`);
     } catch (error) {
-      console.error(`❌ Failed to import ${file}:`, error.message);
+      console.error(`❌ Error importing ${file}: ${error.message}`);
     }
   }
 

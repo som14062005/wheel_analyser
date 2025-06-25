@@ -5,14 +5,17 @@ import About from './pages/About';
 import Prediction from './pages/Prediction';
 import WheelHealth from './pages/WheelHealth';
 import AxleInfo from './pages/axle';
-
+import Navbar from './components/Navbar';
 import Compartment1 from './pages/compartment1';
 import Compartment2 from './pages/compartment2';
 import Compartment3 from './pages/compartment3';
 import Compartment4 from './pages/compartment4';
+import NotFound from './pages/NotFound';
 
 export default function App() {
   return (
+    <>
+      <Navbar />
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/alerts" element={<Alerts />} />
@@ -24,6 +27,9 @@ export default function App() {
       <Route path="/comp2" element={<Compartment2 />} />
       <Route path="/comp3" element={<Compartment3 />} />
       <Route path="/comp4" element={<Compartment4 />} />
+      <Route path="*" element={<NotFound />} />
+
     </Routes>
+    </>
   );
 }
