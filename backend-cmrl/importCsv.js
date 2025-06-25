@@ -4,79 +4,57 @@ const path = require('path');
 const csv = require('csv-parser');
 const WheelData = require('./Models/wheelData');
 
-const MONGO_URI = 'mongodb://127.0.0.1:27017/wheel-analyser';
-
-mongoose.connect(MONGO_URI)
-  .then(() => {
-    console.log('✅ Connected to MongoDB');
-    importAllCSVs();
-  })
-  .catch((err) => {
+// MongoDB connect
+mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/wheeldb')
+  .then(() => console.log('✅ Connected to MongoDB'))
+  .catch(err => {
     console.error('❌ MongoDB connection error:', err);
   });
 
-const csvDir = path.join(__dirname, 'data');
+// Directory where CSV files are stored
+const dataDir = path.join(__dirname, 'data');
 
-const importCSV = (filePath) => {
-  return new Promise((resolve, reject) => {
-    const rawMap = {}; // wheelId → { TrainID, before, after }
+// Helper to clean keys (make case-insensitive matching easy)
+const normalizeKey = key => key.trim().toLowerCase().replace(/\s+/g, '');
 
-    fs.createReadStream(filePath)
-      .pipe(csv())
-      .on('data', (data) => {
-        const state = data.State?.trim().toLowerCase(); // "before" or "after"
-        const side = data.Side?.trim().toUpperCase();   // "LH" or "RH"
-        const trainId = data.TrainID?.trim().toLowerCase();
-        const axle = data.Axle?.trim().toUpperCase();
+async function importAllCSVs() {
+  const files = fs.readdirSync(dataDir).filter(file => file.startsWith('cmrltr') && file.endsWith('.csv'));
 
-        if (!state || !side || !trainId || !axle) return;
+  for (const file of files) {
+    const filePath = path.join(dataDir, file);
+    const trainID = path.basename(file, '.csv'); // e.g., cmrltr1
 
-        const wheelId = `${axle}-${side}`; // e.g., "L9-R9-LH"
+    try {
+      const rawJson = await csv().fromFile(filePath);
 
-        if (!rawMap[wheelId]) {
-          rawMap[wheelId] = {
-            wheelId,
-            TrainID: trainId
-          };
-        }
+      const formatted = rawJson.map(entry => {
+        const keys = Object.keys(entry).reduce((acc, k) => {
+          acc[normalizeKey(k)] = entry[k];
+          return acc;
+        }, {});
 
-        rawMap[wheelId][state] = {
-          diameter: parseFloat(data['Wheel Diameter']),
-          flangeHeight: parseFloat(data['Flange Height']),
-          flangeThickness: parseFloat(data['Flange Thickness']),
-          qr: parseFloat(data['QR']),
-          timestamp: new Date() // or use: new Date(data.timestamp)
+        return {
+          TrainID: trainID,
+          Axle: keys['axle'],
+          State: keys['state'],
+          Side: keys['side'] || null,
+          diameter: parseFloat(keys['wheeldiameter'] || keys['diameter']),
+          flangeHeight: parseFloat(keys['flangeheight']),
+          flangeThickness: parseFloat(keys['flangethickness']),
+          qr: parseFloat(keys['qr'])
         };
-      })
-      .on('end', async () => {
-        try {
-          const documents = Object.values(rawMap).filter(
-            entry => entry.before && entry.after
-          );
-
-          await WheelData.insertMany(documents);
-          console.log(`✅ Imported ${documents.length} entries from ${path.basename(filePath)}`);
-          resolve();
-        } catch (err) {
-          console.error(`❌ Error importing ${path.basename(filePath)}:`, err.message);
-          reject(err);
-        }
       });
-  });
-};
 
-const importAllCSVs = async () => {
-  try {
-    const files = fs.readdirSync(csvDir).filter(file => file.endsWith('.csv'));
+      const cleaned = formatted.filter(e =>
+        e.Axle && e.State && !isNaN(e.diameter)
+      );
 
-    for (const file of files) {
-      const filePath = path.join(csvDir, file);
-      try {
-        await importCSV(filePath);
-      } catch {
-        // Error already logged
-      }
+      await WheelData.insertMany(cleaned);
+      console.log(`✅ Imported ${cleaned.length} entries from ${file}`);
+    } catch (error) {
+      console.error(`❌ Error importing ${file}: ${error.message}`);
     }
+  }
 
     console.log('✅ All CSVs processed.');
     mongoose.disconnect();

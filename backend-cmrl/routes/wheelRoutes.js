@@ -2,24 +2,20 @@ const express = require('express');
 const router = express.Router();
 const WheelData = require('../Models/wheelData');
 
-// GET /api/wheels/:trainId
+/**
+ * GET /api/wheels/:trainId
+ * Combines 'before' and 'after' states into a single object per wheelId
+ */
 router.get('/:trainId', async (req, res) => {
   const trainId = req.params.trainId.trim().toLowerCase();
 
   try {
-    const entries = await WheelData.find({ TrainID: trainId });
+    const entries = await WheelData.find({ trainId });
 
     const wheelMap = {};
 
     entries.forEach((entry) => {
-      // Skip invalid entries missing important fields
-      if (!entry.Axle || !entry.Side || !entry.State) {
-        console.warn("⚠️ Skipping invalid entry (missing Axle, Side or State):", entry);
-        return;
-      }
-
-      const key = `${entry.Axle}-${entry.Side}`; // e.g., L9-R9-LH
-      const state = entry.State.toLowerCase();
+      const key = `${entry.Axle}-${entry.Side}`; // Ex: "R1-L1-LH"
 
       if (!wheelMap[key]) {
         wheelMap[key] = {
@@ -28,6 +24,7 @@ router.get('/:trainId', async (req, res) => {
         };
       }
 
+      const state = entry.State.toLowerCase();
       wheelMap[key][state] = {
         diameter: entry.diameter,
         flangeHeight: entry.flangeHeight,
@@ -37,18 +34,20 @@ router.get('/:trainId', async (req, res) => {
       };
     });
 
+    // Filter only fully valid wheels (have both before and after)
     const result = Object.values(wheelMap).filter(w => w.before && w.after);
 
     if (!result.length) {
       return res.status(404).json({ message: `No complete wheel data found for train '${trainId}'` });
     }
 
-    res.json(result);
+    res.json(entries);
   } catch (err) {
     console.error("❌ Error fetching wheel data:", err);
     res.status(500).json({ error: 'Failed to fetch wheel data' });
   }
 });
+
 
 // POST /api/wheels/add
 router.post('/add', async (req, res) => {
