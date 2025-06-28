@@ -33,6 +33,7 @@ router.get('/:trainId', async (req, res) => {
           flangeHeight: entry.flangeHeight,
           flangeThickness: entry.flangeThickness,
           qr: entry.qr,
+          date: entry.date || null,
           timestamp: entry.timestamp || null
         };
       }

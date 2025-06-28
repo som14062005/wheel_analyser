@@ -10,6 +10,7 @@ const wheelDataSchema = new mongoose.Schema({
   flangeHeight: { type: Number, required: true },
   flangeThickness: { type: Number, required: true },
   qr: { type: Number, required: true },
+  date: { type: Date },
   timestamp: { type: Date, default: Date.now }
 });
 
