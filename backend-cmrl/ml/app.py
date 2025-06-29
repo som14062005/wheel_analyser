@@ -1,86 +1,117 @@
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify
 from flask_cors import CORS
 import joblib
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import timedelta
+from dateutil.parser import parse
+from pymongo import MongoClient
+import os
+import time
+import pandas as pd
 
+# ==== App Setup ====
 app = Flask(__name__)
 CORS(app)
 
-# Load model and scaler
+# ==== Load Model and Scaler ====
+MODEL_PATH = "C:/wheel analyser/backend-cmrl/ml/model.pkl"
+SCALER_PATH = "C:/wheel analyser/backend-cmrl/ml/scaler.pkl"
+
 try:
-    model = joblib.load("model.pkl")
-    scaler = joblib.load("scaler.pkl")
+    model = joblib.load(MODEL_PATH)
+    scaler = joblib.load(SCALER_PATH)
     print("✅ Model and scaler loaded successfully!")
 except Exception as e:
     print(f"❌ Failed to load model/scaler: {e}")
     model = None
     scaler = None
 
-FEATURES = ["wheel_diameter", "flange_height", "flange_thickness", "qr"]
-
+# ==== Home Route ====
 @app.route("/")
-def index():
-    return {"message": "🚇 CMRL RUL Prediction API with replacement date logic is running!"}
+def home():
+    return {"message": "✅ CMRL RUL Prediction API is running!"}
 
-@app.route("/predict", methods=["POST"])
-def predict_with_dates():
-    if model is None or scaler is None:
-        return jsonify({"error": "Model or scaler not loaded"}), 500
+# ==== Prediction Route ====
+@app.route("/predict/<train_id>", methods=["GET"])
+def predict(train_id):
+    start_time = time.time()
 
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "No input data provided"}), 400
+    if not model or not scaler:
+        return jsonify({"error": "Model or Scaler not loaded"}), 500
 
-    result = {
-        "TrainID": data.get("TrainID", "Unknown"),
-        "wheelId": data.get("wheelId", "Unknown"),
-        "before": {},
-        "after": {}
-    }
+    # Connect to MongoDB
+    try:
+        client = MongoClient("mongodb://localhost:27017")
+        db = client["wheeldb"]
+        collection = db["wheeldatas"]
+    except Exception as e:
+        return jsonify({"error": "MongoDB connection failed", "details": str(e)}), 500
 
-    for state in ["before", "after"]:
-        if state not in data:
+    # Fetch matching TrainID documents
+    entries = list(collection.find({
+        "TrainID": {"$regex": f"^{train_id}$", "$options": "i"}
+    }))
+
+    if not entries:
+        return jsonify({"error": f"No data found for TrainID: {train_id}"}), 404
+
+    result_by_axle = {}
+    input_vectors = []
+    meta_info = []
+
+    # Step 1: Prepare input and metadata
+    for entry in entries:
+        axle = entry.get("Axle")
+        state = entry.get("State")  # "before" or "after"
+        side = entry.get("Side")    # "LH" or "RH"
+
+        if not axle or not state or not side:
             continue
 
-        for side in ["LH", "RH"]:
-            if side not in data[state]:
-                continue
+        if axle not in result_by_axle:
+            result_by_axle[axle] = {
+                "TrainID": entry.get("TrainID", train_id),
+                "wheelId": axle,
+                "before": {},
+                "after": {}
+            }
 
-            block = data[state][side]
-            try:
-                # Get installation date
-                date_str = block.get("date")
-                install_date = datetime.fromisoformat(date_str)
-            except Exception:
-                result[state][side] = {
-                    "error": "Missing or invalid 'date' (use format: yyyy-mm-dd)"
-                }
-                continue
+        try:
+            install_date =  parse(str(entry.get("date")))
 
-            try:
-                input_vector = [
-                    float(block["diameter"]),
-                    float(block["flangeHeight"]),
-                    float(block["flangeThickness"]),
-                    float(block["qr"])
-                ]
-                input_scaled = scaler.transform([input_vector])
-                rul_days = model.predict(input_scaled)[0]
+            input_vector = {
+                "wheel_diameter": float(entry["diameter"]),
+                "flange_height": float(entry["flangeHeight"]),
+                "flange_thickness": float(entry["flangeThickness"]),
+                "qr": float(entry["qr"])
+            }
 
-                replacement_date = install_date + timedelta(days=int(round(rul_days)))
+            input_vectors.append(input_vector)
+            meta_info.append((axle, state, side, install_date))
 
-                result[state][side] = {
-                    "rul_days": round(float(rul_days), 2),
-                    "install_date": install_date.strftime("%Y-%m-%d"),
-                    "expected_replacement_date": replacement_date.strftime("%Y-%m-%d")
-                }
-            except Exception as e:
-                result[state][side] = {
-                    "error": f"Invalid input or missing field: {str(e)}"
-                }
+        except Exception as e:
+            print(f"⚠️ Skipping entry due to error: {e}")
+            continue
 
-    return jsonify(result)
+    # Step 2: Create DataFrame and predict
+    input_df = pd.DataFrame(input_vectors)
+    scaled = scaler.transform(input_df)
+    predictions = model.predict(scaled)
 
+    # Step 3: Map predictions back
+    for i, (axle, state, side, install_date) in enumerate(meta_info):
+        rul_days = predictions[i]
+        replacement_date = install_date + timedelta(days=int(round(rul_days)))
+
+        result_by_axle[axle][state][side] = {
+            "install_date": install_date.strftime("%Y-%m-%d"),
+            "rul_days": round(float(rul_days), 2),
+            "expected_replacement_date": replacement_date.strftime("%Y-%m-%d")
+        }
+
+    print("⏱️ Total Prediction Time:", round(time.time() - start_time, 2), "seconds")
+    return jsonify(list(result_by_axle.values()))
+
+# ==== Run App ====
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5001)
