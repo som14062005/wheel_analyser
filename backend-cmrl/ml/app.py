@@ -1,4 +1,6 @@
-from flask import Flask, jsonify
+# app.py
+
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 import joblib
 import numpy as np
@@ -8,6 +10,8 @@ from pymongo import MongoClient
 import os
 import time
 import pandas as pd
+from email_alert import check_and_send_alerts, send_email_alert
+ # ✅ Only import send_email_alert (not check_and_send_alerts)
 
 # ==== App Setup ====
 app = Flask(__name__)
@@ -26,12 +30,12 @@ except Exception as e:
     model = None
     scaler = None
 
-# ==== Home Route ====
+# ==== Home ====
 @app.route("/")
 def home():
     return {"message": "✅ CMRL RUL Prediction API is running!"}
 
-# ==== Prediction Route ====
+# ==== Prediction Endpoint ====
 @app.route("/predict/<train_id>", methods=["GET"])
 def predict(train_id):
     start_time = time.time()
@@ -39,7 +43,6 @@ def predict(train_id):
     if not model or not scaler:
         return jsonify({"error": "Model or Scaler not loaded"}), 500
 
-    # Connect to MongoDB
     try:
         client = MongoClient("mongodb://localhost:27017")
         db = client["wheeldb"]
@@ -47,7 +50,6 @@ def predict(train_id):
     except Exception as e:
         return jsonify({"error": "MongoDB connection failed", "details": str(e)}), 500
 
-    # Fetch data
     entries = list(collection.find({
         "TrainID": {"$regex": f"^{train_id}$", "$options": "i"}
     }))
@@ -61,8 +63,8 @@ def predict(train_id):
 
     for entry in entries:
         axle = entry.get("Axle")
-        state = entry.get("State")  # before/after
-        side = entry.get("Side")    # LH/RH
+        state = entry.get("State")
+        side = entry.get("Side")
 
         if not axle or not state or not side:
             continue
@@ -75,7 +77,6 @@ def predict(train_id):
                 "after": {}
             }
 
-        # Parse date
         try:
             raw_date = entry.get("date") or entry.get("timestamp")
             install_date = parse(str(raw_date))
@@ -97,7 +98,6 @@ def predict(train_id):
         input_vectors.append(input_vector)
         meta_info.append((axle, state, side, install_date))
 
-    # Predict
     if not input_vectors:
         return jsonify({"error": "No valid entries to predict"}), 400
 
@@ -121,6 +121,24 @@ def predict(train_id):
     print("⏱️ Total Prediction Time:", round(time.time() - start_time, 2), "seconds")
     return jsonify(list(result_by_axle.values()))
 
-# ==== Run App ====
+# ==== Email Test Endpoint ====
+@app.route("/send-test-email", methods=["POST"])
+def send_test_email():
+    data = request.json
+    try:
+        send_email_alert(
+            data["TrainID"],
+            data["wheelId"],
+            data["side"],
+            data["expectedDate"],
+            data["installDate"],
+            data["rul"]
+        )
+        return jsonify({"message": "✅ Email sent successfully!"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ==== Start Server ====
 if __name__ == "__main__":
+    # ❌ DO NOT call check_and_send_alerts() here!
     app.run(debug=True, port=5001)
