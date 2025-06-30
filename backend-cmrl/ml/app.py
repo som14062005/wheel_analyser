@@ -47,7 +47,7 @@ def predict(train_id):
     except Exception as e:
         return jsonify({"error": "MongoDB connection failed", "details": str(e)}), 500
 
-    # Fetch matching TrainID documents
+    # Fetch data
     entries = list(collection.find({
         "TrainID": {"$regex": f"^{train_id}$", "$options": "i"}
     }))
@@ -59,11 +59,10 @@ def predict(train_id):
     input_vectors = []
     meta_info = []
 
-    # Step 1: Prepare input and metadata
     for entry in entries:
         axle = entry.get("Axle")
-        state = entry.get("State")  # "before" or "after"
-        side = entry.get("Side")    # "LH" or "RH"
+        state = entry.get("State")  # before/after
+        side = entry.get("Side")    # LH/RH
 
         if not axle or not state or not side:
             continue
@@ -76,29 +75,39 @@ def predict(train_id):
                 "after": {}
             }
 
+        # Parse date
         try:
-            install_date =  parse(str(entry.get("date")))
+            raw_date = entry.get("date") or entry.get("timestamp")
+            install_date = parse(str(raw_date))
+        except Exception as e:
+            print(f"⚠️ Skipping entry (date issue): {e}")
+            continue
 
+        try:
             input_vector = {
                 "wheel_diameter": float(entry["diameter"]),
                 "flange_height": float(entry["flangeHeight"]),
                 "flange_thickness": float(entry["flangeThickness"]),
                 "qr": float(entry["qr"])
             }
-
-            input_vectors.append(input_vector)
-            meta_info.append((axle, state, side, install_date))
-
         except Exception as e:
-            print(f"⚠️ Skipping entry due to error: {e}")
+            print(f"⚠️ Skipping entry (value error): {e}")
             continue
 
-    # Step 2: Create DataFrame and predict
-    input_df = pd.DataFrame(input_vectors)
-    scaled = scaler.transform(input_df)
-    predictions = model.predict(scaled)
+        input_vectors.append(input_vector)
+        meta_info.append((axle, state, side, install_date))
 
-    # Step 3: Map predictions back
+    # Predict
+    if not input_vectors:
+        return jsonify({"error": "No valid entries to predict"}), 400
+
+    input_df = pd.DataFrame(input_vectors)
+    try:
+        scaled = scaler.transform(input_df)
+        predictions = model.predict(scaled)
+    except Exception as e:
+        return jsonify({"error": "Model prediction failed", "details": str(e)}), 500
+
     for i, (axle, state, side, install_date) in enumerate(meta_info):
         rul_days = predictions[i]
         replacement_date = install_date + timedelta(days=int(round(rul_days)))
