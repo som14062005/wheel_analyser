@@ -13,9 +13,10 @@ SENDER_PASSWORD = "lqov qcbc ngak rpjm"  # Use Gmail App Password (never share r
 # Hardcoded train incharge emails
 train_incharge_emails = {
     "cmrltr52": "incharge52@cmrl.com",
-    "cmrltr1":"230701248@rajalakshmi.edu.in",
+    "cmrltr1":"rsm@cmrl.in",
     # Add more as needed
 }
+
 
 
 def send_email(recipient, subject, body):
